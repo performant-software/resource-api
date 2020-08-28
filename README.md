@@ -80,5 +80,27 @@ class StudentsSerializer < BaseSerializer
 end
 ```
 
+### Heroku
+During development, your development machine's SSH keys should allow access to the performant-software GitHub organization, so nothing special will need to be done to use this library in another project.
+
+When deploying to a staging server on Heroku, we'll need to allow Heroku access to the react-components repository in order to install dependencies. This section will describe how to do that.
+
+#### Copy preinstall and postinstall scripts
+Copy the `preinstall.sh` and `postinstall.sh` scripts from this repository into your project. It doesn't matter where, but a directory named `scripts` is usually a good idea.
+
+#### Update package.json
+In your root level `package.json`, add or append the following to the `scripts` object:
+```
+"heroku-prebuild": "bash ./scripts/preinstall.sh"
+"heroku-postbuild": "bash ./scripts/postinstall.sh"
+```
+These two scripts will install your SSH key prebuild, then after the dependencies are installed, remove it.
+
+#### Generate a deploy key
+Within the resource-api repository, go to Settings < Deploy Keys. Add a new deploy key for your project. Name it something obvious like "My Awesome Project Staging" so that others will know what it is used for. Copy the value of the key.
+
+#### Add your deploy key to Heroku
+In the Heroku dashboard for your app, navigate to the Settings tab. Add a config var with key `RESOURCE_API_SSH_KEY` and paste the value copied from the deploy key generated on GitHub.
+
 ## License
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
