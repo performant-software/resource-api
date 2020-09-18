@@ -17,7 +17,7 @@ class BaseSerializer
 
     # Set all of the base attributes
     self.class.index_attributes&.map do |a|
-      serialized[a] = item.send(a)
+      extract_value serialized, item, a
     end
 
     return serialized if related?
@@ -51,7 +51,7 @@ class BaseSerializer
 
     # Set all of the base attributes
     self.class.show_attributes&.each do |a|
-      serialized[a] = item.send(a)
+      extract_value serialized, item, a
     end
 
     # Set all of the belongs_to attributes
@@ -86,6 +86,16 @@ class BaseSerializer
   end
 
   private
+
+  def extract_value(serialized, item, attribute)
+    if attribute.is_a?(Symbol)
+      serialized[attribute] = item.send(attribute)
+    elsif attribute.is_a?(Hash)
+      key = attribute.keys.first
+      block = attribute[key]
+      serialized[key] = block.call(item)
+    end
+  end
 
   def render_related_item(related_item, attributes)
     attributes.inject({}) do |serialized, attribute|
