@@ -93,7 +93,7 @@ class Api::ResourceController < ActionController::API
     permitted_parameters.each do |permitted_parameter|
       next unless permitted_parameter.is_a?(Hash)
 
-      nested_attributes = permitted_parameter.keys.first
+      permitted_parameter.keys.each do |nested_attributes|
       nested_attributes_param = nested_attributes.to_s.sub('_attributes', '').to_sym
 
       next unless parameters[nested_attributes_param].present?
@@ -107,6 +107,7 @@ class Api::ResourceController < ActionController::API
       else
         parameters[nested_attributes] = attributes
       end
+    end
     end
 
     parameters
