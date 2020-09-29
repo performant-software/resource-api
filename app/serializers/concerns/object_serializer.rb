@@ -3,44 +3,32 @@ module ObjectSerializer
 
   included do
 
-    def self.index_attributes(*attrs)
+    def self.index_attributes(*attrs, &block)
       @index_attributes ||= []
-      @index_attributes += attrs if attrs.present?
+
+      if attrs.present?
+        if attrs.size == 1 && block.present?
+          @index_attributes << { attrs[0] => block }
+        else
+          @index_attributes += attrs
+        end
+      end
+
       @index_attributes
     end
 
-    def self.index_attribute(attr, &block)
-      @index_attributes ||= []
-      @index_attributes << { attr => block } unless attr.nil? || block.nil?
-    end
-
-    def self.show_attributes(*attrs)
+    def self.show_attributes(*attrs, &block)
       @show_attributes ||= []
-      @show_attributes = attrs if attrs.present?
+
+      if attrs.present?
+        if attrs.size == 1 && block.present?
+          @show_attributes << { attrs[0] => block }
+        else
+          @show_attributes += attrs
+        end
+      end
+
       @show_attributes
-    end
-
-    def self.show_attribute(attr, &block)
-      @show_attributes ||= []
-      @show_attributes << { attr => block } unless attr.nil? || block.nil?
-    end
-
-    def self.belongs_to(*attrs)
-      @belongs_to ||= []
-      @belongs_to += attrs if attrs.present?
-      @belongs_to
-    end
-
-    def self.has_many(*attrs)
-      @has_many ||= []
-      @has_many += attrs if attrs.present?
-      @has_many
-    end
-
-    def self.has_one(*attrs)
-      @has_one ||= []
-      @has_one += attrs if attrs.present?
-      @has_one
     end
 
   end
