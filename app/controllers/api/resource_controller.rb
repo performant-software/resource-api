@@ -1,4 +1,4 @@
-class Api::ResourceController < Api::BaseController
+class Api::ResourceController < ActionController::API
   # Includes
   include Api::Queryable
   include Pagy::Backend
