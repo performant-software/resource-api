@@ -2,14 +2,6 @@ class BaseSerializer
   # Includes
   include ObjectSerializer
 
-  def initialize(related = false)
-    @related = related
-  end
-
-  def related?
-    @related
-  end
-
   def render_index(item)
     return {} if item.nil?
 
@@ -18,27 +10,6 @@ class BaseSerializer
     # Set all of the base attributes
     self.class.index_attributes&.map do |a|
       extract_value serialized, item, a
-    end
-
-    return serialized if related?
-
-    # Set all of the belongs_to attributes
-    self.class.belongs_to&.each do |b|
-      b.keys.each do |a|
-        serializer = b[a]
-        related_item = item.send(a)
-        serialized[a] = serializer.new(true).render_index(related_item)
-      end
-    end
-
-    # Set all of the has_one attributes
-    self.class.has_one&.each do |r|
-      relationship = r.keys.first
-      related_item = item.send(relationship)
-
-      next if related_item.nil?
-
-      serialized[relationship] = render_related_item(related_item, r[relationship])
     end
 
     serialized
@@ -54,63 +25,89 @@ class BaseSerializer
       extract_value serialized, item, a
     end
 
-    # Set all of the belongs_to attributes
-    self.class.belongs_to&.each do |b|
-      b.keys.each do |a|
-        serializer = b[a]
-        related_item = item.send(a)
-        serialized[a] = serializer.new(true).render_index(related_item)
-      end
-    end
-
-    # Set all of the has_many attributes
-    self.class.has_many&.each do |r|
-      relationship = r.keys.first
-
-      serialized[relationship] = item.send(relationship)&.map do |related_item|
-        render_related_item(related_item, r[relationship])
-      end
-    end
-
-    # Set all of the has_one attributes
-    self.class.has_one&.each do |r|
-      relationship = r.keys.first
-      related_item = item.send(relationship)
-
-      next if related_item.nil?
-
-      serialized[relationship] = render_related_item(related_item, r[relationship])
-    end
-
     serialized
   end
 
   private
 
   def extract_value(serialized, item, attribute)
+    return nil unless item.present?
+
+    # If the passed attribute is a property on the item, simply extract the value by calling the method
     if attribute.is_a?(Symbol)
       serialized[attribute] = item.send(attribute)
+
+    # If the passed attribute is a hash, we'll check the value type to determine how to handle it
     elsif attribute.is_a?(Hash)
-      key = attribute.keys.first
-      block = attribute[key]
-      serialized[key] = block.call(item)
-    end
-  end
+      attribute.keys.each do |key|
+        value = attribute[key]
 
-  def render_related_item(related_item, attributes)
-    attributes.inject({}) do |serialized, attribute|
-      if attribute.is_a?(Hash)
-        attribute.keys.each do |key|
-          obj = related_item.send(key)
+        # If the value is a proc, we'll call the proc to extract the value
+        if value.is_a?(Proc)
+          serialized[key] = value.call(item)
 
-          serializer_class = attribute[key]
-          serialized[key] = serializer_class.new(true).render_index(obj)
+        # If the value is an array and the attribute name is a has_many relationship, we'll extract an array of values
+        elsif value.is_a?(Array) && is_has_many?(item, key)
+          related_items = item.send(key)
+          related_attributes = attribute[key]
+
+          serialized[key] = []
+
+          related_items.each do |i|
+            related_serialized = {}
+
+            related_attributes.each do |a|
+              extract_value related_serialized, i, a
+            end
+
+            serialized[key] << related_serialized
+          end
+
+        # TODO: Comment me
+        elsif value.is_a?(Array) && (is_belongs_to?(item, key) || is_has_one?(item, key))
+          related_item = item.send(key)
+          related_attributes = attribute[key]
+
+          related_serialized = {}
+
+          related_attributes.each do |a|
+            extract_value related_serialized, related_item, a
+          end
+
+          serialized[key] = related_serialized
+
+        # If the value is a serializer class, grab the related item, initialize the serializer, and extract the value
+        # from the index render method.
+        elsif value.is_a?(Class) && (is_belongs_to?(item, key) || is_has_one?(item, key))
+          related_item = item.send(key)
+          serialized[key] = value.new.render_index(related_item)
+
+        # If the value is a serializer class, grab the related item, initialize the serializer, iterate over the related
+        # items and extract the value from the index render method.
+        elsif value.is_a?(Class) && is_has_many?(item, key)
+          related_items = item.send(key)
+          serializer = value.new
+
+          serialized[key] = []
+
+          related_items.each do |i|
+            serialized[key] << serializer.render_index(i)
+          end
         end
-      else
-        serialized[attribute] = related_item.send(attribute)
       end
-
-      serialized
     end
   end
+
+  def is_belongs_to?(item, relationship)
+    item.class.reflect_on_all_associations(:belongs_to).map(&:name).include?(relationship)
+  end
+
+  def is_has_many?(item, relationship)
+    item.class.reflect_on_all_associations(:has_many).map(&:name).include?(relationship)
+  end
+
+  def is_has_one?(item, relationship)
+    item.class.reflect_on_all_associations(:has_one).map(&:name).include?(relationship)
+  end
+
 end

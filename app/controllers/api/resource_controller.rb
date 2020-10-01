@@ -93,19 +93,20 @@ class Api::ResourceController < ActionController::API
     permitted_parameters.each do |permitted_parameter|
       next unless permitted_parameter.is_a?(Hash)
 
-      nested_attributes = permitted_parameter.keys.first
-      nested_attributes_param = nested_attributes.to_s.sub('_attributes', '').to_sym
+      permitted_parameter.keys.each do |nested_attributes|
+        nested_attributes_param = nested_attributes.to_s.sub('_attributes', '').to_sym
 
-      next unless parameters[nested_attributes_param].present?
+        next unless parameters[nested_attributes_param].present?
 
-      attributes = parameters.delete(nested_attributes_param)
+        attributes = parameters.delete(nested_attributes_param)
 
-      if attributes.is_a?(Array)
-        parameters[nested_attributes] = attributes.map do |v|
-          rename_params(v, permitted_parameter[nested_attributes])
+        if attributes.is_a?(Array)
+          parameters[nested_attributes] = attributes.map do |v|
+            rename_params(v, permitted_parameter[nested_attributes])
+          end
+        else
+          parameters[nested_attributes] = attributes
         end
-      else
-        parameters[nested_attributes] = attributes
       end
     end
 
@@ -129,10 +130,14 @@ class Api::ResourceController < ActionController::API
   def apply_sort(query)
     return query unless params[:sort_by].present?
 
-    sort_by = params[:sort_by].to_sym
+    sort_bys = params[:sort_by].is_a?(Array) ? params[:sort_by] : [params[:sort_by]]
     sort_direction = params[:sort_direction] == 'descending' ? :desc : :asc
 
-    query.order(sort_by => sort_direction)
+    sort_bys.each_with_index do |sort_by, index|
+      query = query.order(sort_by.to_sym => sort_direction)
+    end
+
+    query
   end
 
   def param_name
