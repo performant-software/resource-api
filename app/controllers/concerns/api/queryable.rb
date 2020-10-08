@@ -43,8 +43,7 @@ module Api::Queryable
       self.class.joins.each do |joins|
         next if skip_relationships?(joins)
         joins.each do |join|
-          next if skip_relationship?(join)
-          query = query.joins(join)
+          query = query.joins process_relationship(join)
         end
       end
 
@@ -57,8 +56,7 @@ module Api::Queryable
       self.class.left_joins.each do |left_joins|
         next if skip_relationships?(left_joins)
         left_joins.each do |left_join|
-          next if skip_relationship?(left_join)
-          query = query.left_joins(left_join)
+          query = query.left_joins process_relationship(left_join)
         end
       end
 
@@ -71,36 +69,37 @@ module Api::Queryable
       self.class.preloads.each do |preloads|
         next if skip_relationships?(preloads)
         preloads.each do |preload|
-          next if skip_relationship?(preload)
-          query = query.preload(preload)
+          query = query.preload process_relationship(preload)
         end
       end
 
       query
     end
 
-    def skip_relationship?(relationship)
-      r = relationship.is_a?(Hash) ? relationship.keys.first : relationship
-      return true if %i(only except).include?(r)
-
-      params[:action] == :index.to_s && item_class.reflect_on_all_associations(:has_many).map(&:name).include?(r)
+    def process_relationship(relationship)
+      return relationship unless relationship.is_a?(Hash)
+      relationship.except(:only, :except)
     end
 
     def skip_relationships?(relationships)
       return false unless relationships.is_a?(Array)
 
-      actions = relationships.select{ |r| r.is_a?(Hash) }.first
-      return false unless actions.present?
+      only_actions = []
+      except_actions = []
 
-      if actions[:only].present?
-        actions = actions[:only].is_a?(Array) ? actions[:only] : [actions[:only]]
-        actions.include?(params[:action])
-      elsif routes[:except].present?
-        actions = actions[:except].is_a?(Array) ? actions[:except] : [actions[:except]]
-        !actions.include?(params[:action])
-      else
-        false
+      relationships.each do |relationship|
+        next unless relationship.is_a?(Hash)
+
+        if relationship.keys.include?(:only)
+          only_actions.push(*relationship[:only])
+        elsif relationship.keys.include?(:except)
+          except_actions.push(*relationship[:except])
+        end
       end
+
+      return false if only_actions.empty? && except_actions.empty?
+
+      only_actions.exclude?(params[:action].to_sym) || except_actions.include?(params[:action].to_sym)
     end
   end
 end
