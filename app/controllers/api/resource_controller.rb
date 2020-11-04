@@ -129,31 +129,6 @@ class Api::ResourceController < ActionController::API
     query.where("#{search_attributes} ILIKE ?", "%#{params[:search]}%")
   end
 
-  def apply_filters_on_associations(query, parent, child)
-    return query unless params[:search].present?
-
-    search_param = params[:search].split(' ').map{|s| "%#{s}%"}
-
-    multiple_search_attributes = search_attributes.count > 1
-
-    child_query_string = multiple_search_attributes ? search_attributes.map{|x| "#{x} ILIKE ANY(ARRAY[?])"}.join(" OR ") : "#{search_attributes[0]} ILIKE ?"
-
-    parent_query_string = multiple_search_attributes ? "#{parent.pluralize.underscore}.record_id ILIKE ANY(ARRAY[?])" : "#{parent.pluralize.underscore}.record_id ILIKE ?"
-
-    query_args = multiple_search_attributes ? (search_attributes.count).times.map {search_param} :  "%#{params[:search]}%"
-
-    record_id_params = multiple_search_attributes ? search_param :  "%#{params[:search]}%"
-
-    query
-      .where(
-        child.constantize
-          .where(child.constantize.arel_table["#{parent.downcase}_id".to_sym].eq(parent.constantize.arel_table[:id]))
-          .where(child_query_string, *query_args)
-          .arel.exists
-      )
-      .or(query.where(parent_query_string, record_id_params))
-  end
-
   def apply_sort(query)
     return query unless params[:sort_by].present?
 
