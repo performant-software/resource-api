@@ -7,10 +7,20 @@ gem build resource-api.gemspec
 ```
 
 ## Installation
+Update your SSH config to use your SSH key to access the resource-api repository:
+
+```
+# ~/.ssh/config
+
+Host resource-api
+  HostName github.com
+  IdentityFile ~/.ssh/id_rsa
+```
+
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'resource-api', github: 'https://github.com/performant-software/resource-api'
+gem 'resource_api', git: 'git@resource-api:performant-software/resource-api.git'
 ```
 
 And then execute:
@@ -81,8 +91,6 @@ end
 ```
 
 ### Heroku
-During development, your development machine's SSH keys should allow access to the performant-software GitHub organization. In your GitHub profile under Settings > SSH and GPG keys, add the public SSH key of your development machine if not already present.
-
 When deploying to a staging server on Heroku, we'll need to allow Heroku access to the resource-api repository in order to install dependencies. This section will describe how to do that.
 
 #### Copy preinstall and postinstall scripts
@@ -98,10 +106,12 @@ In your root level `package.json`, add or append the following to the `scripts` 
 ```
 These two scripts will install your SSH key prebuild, then after the dependencies are installed, remove it.
 
+Note: The heroku-prebuild and heroku-postbuild scripts require the NodeJS buildpack. 
+
 You'll want to use the following syntax for defining the `resource_api` dependency in your Gemfile:
 
-```
-gem 'resource_api', git: 'git@github.com:performant-software/resource-api.git'
+```ruby
+gem 'resource_api', git: 'git@resource-api:performant-software/resource-api.git'
 ```
 
 Note: `yarn` does not seem to work with the above syntax. It is recommended to use `npm`.
@@ -126,13 +136,6 @@ cat my-awesome-project-staging-deploy-key | base64
 ```
 
 In the Heroku dashboard for your app, navigate to the Settings tab. Add a config var with key `RESOURCE_API_SSH_KEY` and paste the value copied from the private deploy key.
-
-#### Add Create React App Buildpack
-If not already present, add the create-react-app buildpack to your Heroku app:
-
-https://github.com/mars/create-react-app-buildpack
-
-Note: Depending on how your application builds the front end, this buildpack may need to be re-ordered to ensure the SSH keys are set prior to installing dependencies.
 
 ## License
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
