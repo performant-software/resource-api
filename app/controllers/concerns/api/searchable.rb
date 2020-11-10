@@ -12,8 +12,9 @@ module Api::Searchable
 
     def apply_search(query)
       return query unless params[:search].present?
-      byebug
-      query.where("#{self.class.search_attributes.join(" OR ")} ILIKE ?", "%#{params[:search]}%")
+      query_args = (self.class.search_attributes.count).times.map {"%#{params[:search]}%"}
+      
+      query.where("#{self.class.search_attributes.map{|attr| attr + " ILIKE ? "}.join(" OR ")}", *query_args)
     end
 
   end
