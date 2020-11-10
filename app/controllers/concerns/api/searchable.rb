@@ -7,7 +7,6 @@ module Api::Searchable
       attrs.each do|attr|
         @attrs << "#{self.controller_name}.#{attr.to_s}" if attrs.present?
       end
-      byebug
       @attrs
     end
 
