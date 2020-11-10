@@ -1,6 +1,7 @@
 class Api::ResourceController < ActionController::API
   # Includes
   include Api::Queryable
+  include Api::Searchable
   include Pagy::Backend
 
   def create
@@ -124,9 +125,7 @@ class Api::ResourceController < ActionController::API
   private
 
   def apply_filters(query)
-    return query unless params[:search].present?
-
-    query.where("#{search_attributes} ILIKE ?", "%#{params[:search]}%")
+    apply_search(query)
   end
 
   def apply_sort(query)
