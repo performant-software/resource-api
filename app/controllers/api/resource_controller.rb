@@ -1,6 +1,7 @@
 class Api::ResourceController < ActionController::API
   # Includes
   include Api::Queryable
+  include Api::Searchable
   include Pagy::Backend
 
   def create
@@ -124,7 +125,7 @@ class Api::ResourceController < ActionController::API
   private
 
   def apply_filters(query)
-    query
+    apply_search(query)
   end
 
   def apply_sort(query)
