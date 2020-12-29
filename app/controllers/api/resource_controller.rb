@@ -31,7 +31,7 @@ class Api::ResourceController < ActionController::API
     query = apply_filters(query)
     query = apply_sort(query)
 
-    list, items = pagy(query, items: self.class.per_page, page: params[:page])
+    list, items = pagy(query, items: params[:per_page] || self.class.per_page, page: params[:page])
     metadata = pagy_metadata(list)
 
     serializer = serializer_class.new
