@@ -9,7 +9,9 @@ class Api::ResourceController < ActionController::API
 
     if item.save
       item = prepare_item(item)
-      render json: { param_name.to_sym => serializer_class.new.render_index(item) }
+      serializer = serializer_class.new(current_user)
+
+      render json: { param_name.to_sym => serializer.render_show(item) }
     else
       render json: { errors: item.errors }, status: 400
     end
@@ -34,7 +36,7 @@ class Api::ResourceController < ActionController::API
     list, items = pagy(query, items: params[:per_page] || self.class.per_page, page: params[:page])
     metadata = pagy_metadata(list)
 
-    serializer = serializer_class.new
+    serializer = serializer_class.new(current_user)
     serialized = items.map{ |i| serializer.render_index(i) }
 
     render json: { param_name.pluralize.to_sym  => serialized,
@@ -47,9 +49,11 @@ class Api::ResourceController < ActionController::API
 
     item = query.find(params[:id])
     item_name = param_name.to_sym
-    item = prepare_item(item)
 
-    render json: { item_name => serializer_class.new.render_show(item) }
+    item = prepare_item(item)
+    serializer = serializer_class.new(current_user)
+
+    render json: { item_name => serializer.render_show(item) }
   end
 
   def update
@@ -58,8 +62,9 @@ class Api::ResourceController < ActionController::API
     if item.update(prepare_params)
       item_name = param_name.to_sym
       item = prepare_item(item)
+      serializer = serializer_class.new(current_user)
 
-      render json: { item_name => serializer_class.new.render_index(item) }
+      render json: { item_name => serializer.render_show(item) }
     else
       render json: { errors: item.errors }, status: 400
     end

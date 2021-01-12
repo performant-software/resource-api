@@ -2,6 +2,12 @@ class BaseSerializer
   # Includes
   include ObjectSerializer
 
+  attr_reader :current_user
+
+  def initialize(current_user = nil)
+    @current_user = current_user
+  end
+
   def render_index(item)
     return {} if item.nil?
 
@@ -44,7 +50,7 @@ class BaseSerializer
 
         # If the value is a proc, we'll call the proc to extract the value
         if value.is_a?(Proc)
-          serialized[key] = value.call(item)
+          serialized[key] = value.call(item, current_user)
 
         # If the value is an array and the attribute name is a has_many relationship, we'll extract an array of values
         elsif value.is_a?(Array) && is_has_many?(item, key)
@@ -80,13 +86,13 @@ class BaseSerializer
         # from the index render method.
         elsif value.is_a?(Class) && (is_belongs_to?(item, key) || is_has_one?(item, key))
           related_item = item.send(key)
-          serialized[key] = value.new.render_index(related_item)
+          serialized[key] = value.new(current_user).render_index(related_item)
 
         # If the value is a serializer class, grab the related item, initialize the serializer, iterate over the related
         # items and extract the value from the index render method.
         elsif value.is_a?(Class) && is_has_many?(item, key)
           related_items = item.send(key)
-          serializer = value.new
+          serializer = value.new(current_user)
 
           serialized[key] = []
 
