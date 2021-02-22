@@ -40,7 +40,12 @@ class Api::ResourceController < ActionController::API
     serialized = items.map{ |i| serializer.render_index(i) }
 
     render json: { param_name.pluralize.to_sym  => serialized,
-                   list: { page: metadata[:page], pages: metadata[:pages] } }
+                   list: {
+                     count: metadata[:count],
+                     page: metadata[:page],
+                     pages: metadata[:pages]
+                   }
+                 }
   end
 
   def show
