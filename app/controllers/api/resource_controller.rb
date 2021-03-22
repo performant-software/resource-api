@@ -33,7 +33,7 @@ class Api::ResourceController < ActionController::API
     query = apply_filters(query)
     query = apply_sort(query)
 
-    list, items = pagy(query, items: params[:per_page] || self.class.per_page, page: params[:page])
+    list, items = pagy(query, items: per_page, page: params[:page])
     metadata = pagy_metadata(list)
 
     serializer = serializer_class.new(current_user)
@@ -153,5 +153,19 @@ class Api::ResourceController < ActionController::API
 
   def param_name
     controller_name.singularize
+  end
+
+  def per_page
+    # Default count to the provided parameter
+    count = params[:per_page].to_i if params.has_key?(:per_page) && params[:per_page].respond_to?(:to_i)
+
+    # Use the per_page defined in the controller if no parameter is provided
+    count = self.class.per_page if count.nil?
+
+    # If the count is less than zero, return all records. This will produce an extra query in order to obtain the count
+    # of the number of records.
+    return item_class.all.count if count <= 0
+
+    count
   end
 end
