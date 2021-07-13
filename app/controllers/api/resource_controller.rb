@@ -111,9 +111,9 @@ class Api::ResourceController < ActionController::API
 
         attributes = parameters.delete(nested_attributes_param)
 
-        if attributes.is_a?(Array)
-          parameters[nested_attributes] = attributes.map do |v|
-            rename_params(v, permitted_parameter[nested_attributes])
+        if attributes.is_a?(ActionController::Parameters)
+          parameters[nested_attributes] = attributes.keys.map do |key|
+            parameters[nested_attributes] = rename_params(attributes[key], permitted_parameter[nested_attributes])
           end
         else
           parameters[nested_attributes] = attributes
