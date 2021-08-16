@@ -117,11 +117,11 @@ module Api::Filterable
       when OPERATOR_EQUAL
         query.where(subquery.where(attribute => value).arel.exists)
       when OPERATOR_NOT_EQUAL
-        query.where(subquery.where.not(attribute => value).arel.exists)
+        query.where.not(subquery.where(attribute => value).arel.exists)
       when OPERATOR_CONTAIN
         query.where(subquery.where("#{attribute} ILIKE ?", "%#{value}%").arel.exists)
       when OPERATOR_NOT_CONTAIN
-        query.where(subquery.where.not("#{attribute} ILIKE ?", "%#{value}%").arel.exists)
+        query.where.not(subquery.where("#{attribute} ILIKE ?", "%#{value}%").arel.exists)
       when OPERATOR_EMPTY
         query.where.not(subquery.arel.exists)
       when OPERATOR_NOT_EMPTY
