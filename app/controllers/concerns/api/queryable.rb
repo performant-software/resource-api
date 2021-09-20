@@ -98,15 +98,17 @@ module Api::Queryable
     end
 
     def apply_scope?(relationship)
-      return false unless relationship.is_a?(Hash) && relationship[:scope].present?
-      return true unless relationship[:if].present?
+      return false unless relationship.is_a?(Hash) && relationship.has_key?(:scope)
+      return true unless relationship.has_key?(:if)
 
       condition = relationship[:if]
 
       if condition.is_a?(Proc)
         apply_scope = condition.call
-      elsif condition.is_a?(Symbol)
+      elsif condition.is_a?(Symbol) && self.respond_to?(condition)
         apply_scope = self.send(condition)
+      else
+        apply_scope = false
       end
 
       apply_scope

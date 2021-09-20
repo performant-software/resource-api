@@ -1,18 +1,10 @@
 class Preloader < ActiveRecord::Associations::Preloader
-  # Initialize the @scope to "false"
-  def initialize(associate_by_default: nil)
-    super
-    @scope = false
-  end
-
   # After applying the scope, set @scope to "true"
   def preloaders_for_reflection(reflection, records, scope)
     scope = @scope ? nil : scope
-    val = super(reflection, records, scope)
-
     @scope = true
 
-    val
+    super(reflection, records, scope)
   end
 
   # Overriding to use custom Association class
