@@ -43,7 +43,7 @@ module Api::Queryable
         preloads.each do |preload|
           next unless conditional?(preload)
 
-          scope = apply_scope?(preload) ? preload[:scope] : nil
+          scope = apply_scope?(preload) ? resolve_scope(preload) : nil
           Preloader.new.preload(query, process_relationship(preload), scope)
         end
       end
@@ -52,10 +52,6 @@ module Api::Queryable
     end
 
     private
-
-    def conditional?(relationship)
-      relationship.is_a?(Hash) && relationship.has_key?(:scope)
-    end
 
     def apply_joins(query)
       return query unless self.class.joins.present?
@@ -114,9 +110,19 @@ module Api::Queryable
       apply_scope
     end
 
+    def conditional?(relationship)
+      relationship.is_a?(Hash) && relationship.has_key?(:scope)
+    end
+
     def process_relationship(relationship)
       return relationship unless relationship.is_a?(Hash)
       relationship.except(:only, :except, :scope, :if)
+    end
+
+    def resolve_scope(relationship)
+      return relationship[:scope] unless scope.is_a?(Symbol) && self.respond_to?(relationship[:scope])
+
+      self.send(relationship[:scope])
     end
 
     def skip_relationships?(relationships)
