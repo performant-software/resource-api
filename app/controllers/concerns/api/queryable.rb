@@ -120,9 +120,11 @@ module Api::Queryable
     end
 
     def resolve_scope(relationship)
-      return relationship[:scope] unless scope.is_a?(Symbol) && self.respond_to?(relationship[:scope])
+      if relationship[:scope] && relationship[:scope].is_a?(Symbol) && self.respond_to?(relationship[:scope])
+        return self.send(relationship[:scope])
+      end
 
-      self.send(relationship[:scope])
+      relationship[:scope]
     end
 
     def skip_relationships?(relationships)
