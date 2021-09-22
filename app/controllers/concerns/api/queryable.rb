@@ -42,9 +42,7 @@ module Api::Queryable
         next if skip_relationships?(preloads)
         preloads.each do |preload|
           next unless conditional?(preload)
-
-          scope = apply_scope?(preload) ? resolve_scope(preload) : nil
-          Preloader.new.preload(query, process_relationship(preload), scope)
+          Preloader.new.preload(query, process_relationship(preload), resolve_scope(preload))
         end
       end
 
@@ -116,15 +114,34 @@ module Api::Queryable
 
     def process_relationship(relationship)
       return relationship unless relationship.is_a?(Hash)
-      relationship.except(:only, :except, :scope, :if)
+      relationship.except(:only, :except, :scope, :if, :limit)
     end
 
     def resolve_scope(relationship)
-      if relationship[:scope] && relationship[:scope].is_a?(Symbol) && self.respond_to?(relationship[:scope])
-        return self.send(relationship[:scope])
+      scope = nil
+
+      # If we're applying the scope, determine how the scope should be resolved
+      if apply_scope?(relationship)
+        if relationship[:scope] && relationship[:scope].is_a?(Symbol) && self.respond_to?(relationship[:scope])
+          scope = self.send(relationship[:scope])
+        else
+          scope = relationship[:scope]
+        end
       end
 
-      relationship[:scope]
+      # Apply the limit if present
+      if relationship[:limit].present?
+        # If no scope if supplied, generate the scope based on the first key of the relationship
+        if scope.nil?
+          association = relationship.keys.first
+          klass = item_class.reflect_on_association(association).klass
+          scope = klass.all
+        end
+
+        scope = scope.limit(relationship[:limit])
+      end
+
+      scope
     end
 
     def skip_relationships?(relationships)
