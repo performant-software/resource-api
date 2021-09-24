@@ -29,7 +29,7 @@ module Api::BatchUpdateable
   protected
 
   def process_delete
-    delete_all item_class.where(id: params[:ids])
+    destroy_all item_class.where(id: params[:ids])
   end
 
   def process_update
@@ -44,11 +44,11 @@ module Api::BatchUpdateable
 
   private
 
-  def delete_all(query)
+  def destroy_all(query)
     error = nil
 
     begin
-      query.delete_all
+      query.destroy_all
     rescue => e
       error = e.message
     end
@@ -113,7 +113,7 @@ module Api::BatchUpdateable
         association_column => params[:value]
       }
 
-      error = delete_all(klass.where(criteria))
+      error = destroy_all(klass.where(criteria))
     end
 
     error
