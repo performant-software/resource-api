@@ -170,9 +170,18 @@ class Api::ResourceController < ActionController::API
     # Use the per_page defined in the controller if no parameter is provided
     count = self.class.per_page if count.nil?
 
-    # If the count is less than zero, return all records. This will produce an extra query in order to obtain the count
+    # If the count is less than or equal to zero, return all records. 
+    # This will produce an extra query in order to obtain the count
     # of the number of records.
-    return item_class.all.count if count <= 0
+    if count <= 0
+      all_count = item_class.all.count
+      # Prevent per_page being set to 0 if there are 0 records
+      if all_count == 0
+        count = self.class.per_page
+      else
+        count = all_count
+      end
+    end
 
     count
   end
