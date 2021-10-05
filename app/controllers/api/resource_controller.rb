@@ -123,6 +123,10 @@ class Api::ResourceController < ActionController::API
           parameters[nested_attributes] = attributes.map do |attrs|
             parameters[nested_attributes] = rename_params(attrs, permitted_parameter[nested_attributes])
           end
+        elsif attributes.is_a?(ActionController::Parameters) && attributes.keys.all?(&:is_integer?)
+          parameters[nested_attributes] = attributes.keys.map do |key|
+            parameters[nested_attributes] = rename_params(attributes[key], permitted_parameter[nested_attributes])
+          end
         else
           parameters[nested_attributes] = attributes
         end
