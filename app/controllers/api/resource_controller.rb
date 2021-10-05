@@ -119,7 +119,11 @@ class Api::ResourceController < ActionController::API
 
         attributes = parameters.delete(nested_attributes_param)
 
-        if attributes.is_a?(ActionController::Parameters)
+        if attributes.is_a?(Array)
+          parameters[nested_attributes] = attributes.map do |attrs|
+            parameters[nested_attributes] = rename_params(attrs, permitted_parameter[nested_attributes])
+          end
+        elsif attributes.is_a?(ActionController::Parameters) && attributes.keys.all?(&:is_integer?)
           parameters[nested_attributes] = attributes.keys.map do |key|
             parameters[nested_attributes] = rename_params(attributes[key], permitted_parameter[nested_attributes])
           end
@@ -170,7 +174,7 @@ class Api::ResourceController < ActionController::API
     # Use the per_page defined in the controller if no parameter is provided
     count = self.class.per_page if count.nil?
 
-    # If the count is less than or equal to zero, return all records. 
+    # If the count is less than or equal to zero, return all records.
     # This will produce an extra query in order to obtain the count
     # of the number of records.
     if count <= 0
