@@ -95,6 +95,10 @@ module Api::Filterable
         query.where(attribute => nil)
       when OPERATOR_NOT_EMPTY
         query.where.not(attribute => nil)
+      when OPERATOR_GREATER_THAN
+        query.where("#{attribute} > #{value}")
+      when OPERATOR_LESS_THAN
+        query.where("#{attribute} < #{value}")
       else
         query
       end
