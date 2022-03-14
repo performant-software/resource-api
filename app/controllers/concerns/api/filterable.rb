@@ -130,6 +130,10 @@ module Api::Filterable
         query.where.not(subquery.arel.exists)
       when OPERATOR_NOT_EMPTY
         query.where(subquery.arel.exists)
+      when OPERATOR_GREATER_THAN
+        query.where(subquery.where("#{attribute} > ?", value).arel.exists)
+      when OPERATOR_LESS_THAN
+        query.where(subquery.where("#{attribute} < ?", value).arel.exists)
       else
         query
       end
