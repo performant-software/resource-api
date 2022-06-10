@@ -74,6 +74,7 @@ module Api::Filterable
 
       start_date = DateTime.parse(date[:startDate])
       end_date = DateTime.parse(date[:endDate])
+      end_date = end_date + (23.hours + 59.minutes)
 
       query.where(attribute => start_date..end_date)
     end
