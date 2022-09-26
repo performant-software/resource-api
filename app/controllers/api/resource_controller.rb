@@ -2,6 +2,7 @@ class Api::ResourceController < ActionController::API
   # Includes
   include Api::Queryable
   include Api::Searchable
+  include Api::Sortable
   include Pagy::Backend
 
   def create
@@ -32,6 +33,7 @@ class Api::ResourceController < ActionController::API
   def index
     query = base_query
     query = build_query(query)
+    query = apply_search(query)
     query = apply_filters(query)
     query = apply_sort(query)
 
@@ -84,6 +86,10 @@ class Api::ResourceController < ActionController::API
   end
 
   protected
+
+  def apply_filters(query)
+    query
+  end
 
   def base_query
     item_class.all
@@ -145,23 +151,6 @@ class Api::ResourceController < ActionController::API
   end
 
   private
-
-  def apply_filters(query)
-    apply_search(query)
-  end
-
-  def apply_sort(query)
-    return query unless params[:sort_by].present?
-
-    sort_bys = params[:sort_by].is_a?(Array) ? params[:sort_by] : [params[:sort_by]]
-    sort_direction = params[:sort_direction] == 'descending' ? :desc : :asc
-
-    sort_bys.each_with_index do |sort_by, index|
-      query = query.order(sort_by.to_sym => sort_direction)
-    end
-
-    query
-  end
 
   def param_name
     controller_name.singularize
