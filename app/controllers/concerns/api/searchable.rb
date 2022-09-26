@@ -1,36 +1,63 @@
 module Api::Searchable
   extend ActiveSupport::Concern
 
-  included do
-    def self.search_attributes(*attrs)
+  class_methods do
+    def search_attributes(*attrs)
       @attrs ||= []
-
-      # Iterate over the attributes and add them for the list.
-      #
-      # For symbols, we'll assume that the column is on the primary table and use the controller name to format the SQL
-      # as <table-name>.<column_name>.
-      #
-      # For strings, we'll assume that the column is NOT on the primary table (instead possibly a join table) and
-      # allow the controller to format the SQL as appropriate.
-      attrs&.each do |attr|
-        if attr.is_a?(Symbol)
-          @attrs << "#{self.controller_name}.#{attr.to_s}"
-        elsif attr.is_a?(String)
-          @attrs << attr
-        end
-      end
-
+      @attrs += attrs
       @attrs
     end
 
-    def apply_search(query)
-      return query unless params[:search].present?
-      query_string = "#{self.class.search_attributes.map{|attr| attr + " ILIKE ?"}.join(" OR ")}"
-      query_args = (self.class.search_attributes.count).times.map {"%#{params[:search]}%"}
-
-      query.where(query_string, *query_args)
+    def search_methods(*methods)
+      @search_methods ||= []
+      @search_methods += methods unless methods.nil?
+      @search_methods
     end
-
   end
 
+  included do
+
+    def apply_search(query)
+      search_query = nil
+
+      [:apply_searchable, *self.class.search_methods].each do |method|
+        search_query = self.send(method, search_query.nil? ? item_class.all : search_query)
+      end
+
+      query.merge(search_query)
+    end
+
+    def resolve_search_query(attr)
+      attribute = resolve_search_attribute(attr)
+      item_class.where("#{attribute} ILIKE ?", "%#{params[:search]}%")
+    end
+
+    def resolve_search_attribute(attr)
+      if attr.is_a?(Symbol)
+        "#{self.class.controller_name}.#{attr.to_s}"
+      elsif attr.is_a?(String)
+        attr
+      end
+    end
+
+    private
+
+    def apply_searchable(query)
+      return query unless params[:search].present?
+
+      or_query = nil
+
+      self.class.search_attributes.each do |attr|
+        attribute_query = resolve_search_query(attr)
+
+        if or_query.nil?
+          or_query = attribute_query
+        else
+          or_query = or_query.or(attribute_query)
+        end
+      end
+
+      query.merge(or_query)
+    end
+  end
 end
