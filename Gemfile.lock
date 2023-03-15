@@ -3,7 +3,7 @@ PATH
   specs:
     resource_api (0.1.0)
       pagy (~> 5.10)
-      rails (>= 6.0.3.2, < 8)
+      rails (>= 7.0, < 8)
 
 GEM
   remote: https://rubygems.org/
