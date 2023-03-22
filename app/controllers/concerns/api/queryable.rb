@@ -42,7 +42,11 @@ module Api::Queryable
         next if skip_relationships?(preloads)
         preloads.each do |preload|
           next unless conditional?(preload)
-          Preloader.new.preload(query, process_relationship(preload), resolve_scope(preload))
+          Preloader.new(
+            records: [query].flatten,
+            associations: process_relationship(preload),
+            scope: resolve_scope(preload)
+          ).call
         end
       end
 
