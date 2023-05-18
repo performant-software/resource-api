@@ -14,7 +14,7 @@ class Api::ResourceController < ActionController::API
       preloads(item)
 
       serializer = serializer_class.new(current_user)
-      render json: { param_name.to_sym => serializer.render_index(item) }
+      render json: { param_name.to_sym => serializer.render_show(item) }
     else
       render json: { errors: item.errors }, status: 400
     end
@@ -79,7 +79,7 @@ class Api::ResourceController < ActionController::API
       item_name = param_name.to_sym
       serializer = serializer_class.new(current_user)
 
-      render json: { item_name => serializer.render_index(item) }
+      render json: { item_name => serializer.render_show(item) }
     else
       render json: { errors: item.errors }, status: 400
     end
