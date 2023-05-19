@@ -13,7 +13,9 @@ class Api::ResourceController < ActionController::API
 
       preloads(item)
 
-      serializer = serializer_class.new(current_user)
+      options = load_records([item])
+      serializer = serializer_class.new(current_user, options)
+
       render json: { param_name.to_sym => serializer.render_index(item) }
     else
       render json: { errors: item.errors }, status: 400
@@ -42,7 +44,8 @@ class Api::ResourceController < ActionController::API
 
     preloads(items)
 
-    serializer = serializer_class.new(current_user)
+    options = load_records(items)
+    serializer = serializer_class.new(current_user, options)
     serialized = items.map{ |i| serializer.render_index(i) }
 
     render json: { param_name.pluralize.to_sym  => serialized,
@@ -59,13 +62,14 @@ class Api::ResourceController < ActionController::API
     query = build_query(query)
 
     item = query.find(params[:id])
-    item_name = param_name.to_sym
-
     item = prepare_item(item)
+
     preloads(item)
 
-    serializer = serializer_class.new(current_user)
-    render json: { item_name => serializer.render_show(item) }
+    options = load_records([item])
+    serializer = serializer_class.new(current_user, options)
+
+    render json: { param_name.to_sym => serializer.render_show(item) }
   end
 
   def update
@@ -76,10 +80,10 @@ class Api::ResourceController < ActionController::API
       item = prepare_item(item)
       preloads(item)
 
-      item_name = param_name.to_sym
-      serializer = serializer_class.new(current_user)
+      options = load_records([item])
+      serializer = serializer_class.new(current_user, options)
 
-      render json: { item_name => serializer.render_index(item) }
+      render json: { param_name.to_sym => serializer.render_index(item) }
     else
       render json: { errors: item.errors }, status: 400
     end
@@ -93,6 +97,10 @@ class Api::ResourceController < ActionController::API
 
   def base_query
     item_class.all
+  end
+
+  def load_records(items)
+    {}
   end
 
   def permitted_params
