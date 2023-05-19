@@ -16,7 +16,7 @@ class Api::ResourceController < ActionController::API
       options = load_records([item])
       serializer = serializer_class.new(current_user, options)
 
-      render json: { param_name.to_sym => serializer.render_index(item) }
+      render json: { param_name.to_sym => serializer.render_show(item) }
     else
       render json: { errors: item.errors }, status: 400
     end
@@ -83,7 +83,7 @@ class Api::ResourceController < ActionController::API
       options = load_records([item])
       serializer = serializer_class.new(current_user, options)
 
-      render json: { param_name.to_sym => serializer.render_index(item) }
+      render json: { param_name.to_sym => serializer.render_show(item) }
     else
       render json: { errors: item.errors }, status: 400
     end
