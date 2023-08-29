@@ -4,16 +4,22 @@ class Api::ResourceController < ActionController::API
   include Api::Searchable
   include Api::Sortable
   include Pagy::Backend
+  include Pundit::Authorization
+
+  # Authorization errors
+  rescue_from Pundit::NotAuthorizedError, with: :unauthorized
 
   def create
     item = item_class.new(prepare_params)
+    authorize item if has_policy?
 
     if item.save
-      item = prepare_item(item)
+      after_create(item)
 
+      item = prepare_item(item)
       preloads(item)
 
-      options = load_records([item])
+      options = load_records(item)
       serializer = serializer_class.new(current_user, options)
 
       render json: { param_name.to_sym => serializer.render_show(item) }
@@ -24,8 +30,10 @@ class Api::ResourceController < ActionController::API
 
   def destroy
     item = item_class.find(params[:id])
+    authorize item if has_policy?
 
     if item.destroy
+      after_destroy
       render json: { status: :ok }
     else
       render json: { errors: item.errors }, status: 400
@@ -62,11 +70,13 @@ class Api::ResourceController < ActionController::API
     query = build_query(query)
 
     item = query.find(params[:id])
-    item = prepare_item(item)
+    authorize item if has_policy?
 
+
+    item = prepare_item(item)
     preloads(item)
 
-    options = load_records([item])
+    options = load_records(item)
     serializer = serializer_class.new(current_user, options)
 
     render json: { param_name.to_sym => serializer.render_show(item) }
@@ -74,13 +84,15 @@ class Api::ResourceController < ActionController::API
 
   def update
     item = item_class.find(params[:id])
+    authorize item if has_policy?
 
-    if item.update(prepare_params)
+    if item.update(prepare_params(item))
+      after_update(item)
 
       item = prepare_item(item)
       preloads(item)
 
-      options = load_records([item])
+      options = load_records(item)
       serializer = serializer_class.new(current_user, options)
 
       render json: { param_name.to_sym => serializer.render_show(item) }
@@ -91,19 +103,35 @@ class Api::ResourceController < ActionController::API
 
   protected
 
+  def after_create(item)
+    # Implemented in sub-classes
+  end
+
+  def after_destroy
+    # Implemented in sub-classes
+  end
+
+  def after_update(item)
+    # Implemented in sub-classes
+  end
+
   def apply_filters(query)
     query
   end
 
   def base_query
+    return policy_scope(item_class) if has_policy?
+
     item_class.all
   end
 
-  def load_records(items)
+  def load_records(item)
     {}
   end
 
-  def permitted_params
+  def permitted_params(item = nil)
+    return policy_class.new(current_user, item).permitted_params if has_policy?
+
     item_class.permitted_params
   end
 
@@ -111,9 +139,9 @@ class Api::ResourceController < ActionController::API
     item
   end
 
-  def prepare_params
+  def prepare_params(item = nil)
     # Replace nested attributes parameter names with the "_attributes" version
-    params[param_name] = rename_params(params[param_name], permitted_params)
+    params[param_name] = rename_params(params[param_name], permitted_params(item))
 
     params
       .require(param_name.to_sym)
@@ -160,6 +188,14 @@ class Api::ResourceController < ActionController::API
 
   private
 
+  def has_policy?
+    begin
+      policy_class&.is_a?(Class)
+    rescue NameError
+      false
+    end
+  end
+
   def param_name
     controller_name.singularize
   end
@@ -185,5 +221,20 @@ class Api::ResourceController < ActionController::API
     end
 
     count
+  end
+
+  def policy_class
+    begin
+      Module.const_get("#{item_class.to_s}Policy")
+    rescue NameError
+      nil
+    end
+  end
+
+  def unauthorized(error)
+    policy_name = error.policy.class.to_s.underscore
+    message = I18n.t("authorization.#{policy_name}.#{error.query}")
+
+    render json: { errors: [{ base: message }] }, status: :unauthorized
   end
 end
