@@ -7,9 +7,5 @@ class BasePolicy
       @current_user  = current_user
       @scope = scope
     end
-
-    def permitted_params
-      []
-    end
   end
 end

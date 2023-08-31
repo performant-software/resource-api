@@ -130,7 +130,10 @@ class Api::ResourceController < ActionController::API
   end
 
   def permitted_params(item = nil)
-    return policy_class.new(current_user, item).permitted_params if has_policy?
+    if has_policy?
+      policy = policy_class.new(current_user, item)
+      return policy.permitted_params if policy.respond_to?(:permitted_params)
+    end
 
     item_class.permitted_params
   end
