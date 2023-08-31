@@ -27,6 +27,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "rails", ">= 7.0", "< 8"
   spec.add_dependency "pagy", "~> 5.10"
+  spec.add_dependency "pundit", "~> 2.3.1"
 
   spec.add_development_dependency "sqlite3"
 end
