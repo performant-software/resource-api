@@ -132,7 +132,15 @@ class Api::ResourceController < ActionController::API
   def permitted_params(item = nil)
     if has_policy?
       policy = policy_class.new(current_user, item)
-      return policy.permitted_params if policy.respond_to?(:permitted_params)
+      action_params_method = "permitted_attributes_for_#{action_name}".to_sym
+
+      if policy.respond_to?(action_params_method)
+        method_name = action_params_method
+      elsif policy.respond_to?(:permitted_attributes)
+        method_name = :permitted_attributes
+      end
+
+      return policy.send(method_name) unless method_name.nil?
     end
 
     item_class.permitted_params
