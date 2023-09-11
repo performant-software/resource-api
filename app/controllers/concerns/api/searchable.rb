@@ -34,7 +34,7 @@ module Api::Searchable
 
     def resolve_search_attribute(attr)
       if attr.is_a?(Symbol)
-        "#{self.class.controller_name}.#{attr.to_s}"
+        "#{item_class.table_name}.#{attr.to_s}"
       elsif attr.is_a?(String)
         attr
       end
