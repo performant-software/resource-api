@@ -43,7 +43,11 @@ module Api::Searchable
     private
 
     def apply_searchable(query)
+      # No need to apply a search if no parameter is applied
       return query unless params[:search].present?
+
+      # No need to apply a search if no attributes are provided
+      return query if self.class.search_attributes.empty?
 
       or_query = nil
 
@@ -57,7 +61,11 @@ module Api::Searchable
         end
       end
 
-      query.merge(or_query)
+      if query == item_class.all
+        query.merge(or_query)
+      else
+        query.or(or_query)
+      end
     end
   end
 end
