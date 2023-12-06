@@ -9,9 +9,21 @@ class Api::ResourceController < ActionController::API
   # Authorization errors
   rescue_from Pundit::NotAuthorizedError, with: :unauthorized
 
+  def initialize
+    @authorize = true
+  end
+
+  def authorization_valid?
+    has_policy? && @authorize
+  end
+
+  def bypass_authorization
+    @authorize = false
+  end
+
   def create
     item = item_class.new(prepare_params)
-    authorize item if has_policy?
+    authorize item if authorization_valid?
 
     if item.save
       after_create(item)
@@ -30,7 +42,7 @@ class Api::ResourceController < ActionController::API
 
   def destroy
     item = item_class.find(params[:id])
-    authorize item if has_policy?
+    authorize item if authorization_valid?
 
     if item.destroy
       after_destroy
@@ -70,8 +82,7 @@ class Api::ResourceController < ActionController::API
     query = build_query(query)
 
     item = query.find(params[:id])
-    authorize item if has_policy?
-
+    authorize item if authorization_valid?
 
     item = prepare_item(item)
     preloads(item)
@@ -84,7 +95,7 @@ class Api::ResourceController < ActionController::API
 
   def update
     item = item_class.find(params[:id])
-    authorize item if has_policy?
+    authorize item if authorization_valid?
 
     if item.update(prepare_params(item))
       after_update(item)
@@ -120,7 +131,7 @@ class Api::ResourceController < ActionController::API
   end
 
   def base_query
-    return policy_scope(item_class) if has_policy?
+    return policy_scope(item_class) if authorization_valid?
 
     item_class.all
   end
@@ -130,7 +141,7 @@ class Api::ResourceController < ActionController::API
   end
 
   def permitted_params(item = nil)
-    if has_policy?
+    if authorization_valid?
       policy = policy_class.new(current_user, item)
       action_params_method = "permitted_attributes_for_#{action_name}".to_sym
 
