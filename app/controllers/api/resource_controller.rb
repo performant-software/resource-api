@@ -13,14 +13,6 @@ class Api::ResourceController < ActionController::API
     @authorize = true
   end
 
-  def authorization_valid?
-    has_policy? && @authorize
-  end
-
-  def bypass_authorization
-    @authorize = false
-  end
-
   def create
     item = item_class.new(prepare_params)
     authorize item if authorization_valid?
@@ -63,18 +55,21 @@ class Api::ResourceController < ActionController::API
     metadata = pagy_metadata(list)
 
     preloads(items)
-
     options = load_records(items)
-    serializer = serializer_class.new(current_user, options)
-    serialized = items.map{ |i| serializer.render_index(i) }
 
-    render json: { param_name.pluralize.to_sym  => serialized,
-                   list: {
-                     count: metadata[:count],
-                     page: metadata[:page],
-                     pages: metadata[:pages]
-                   }
-                 }
+    serializer = serializer_class.new(current_user, options)
+    serialized = serializer.render_index(items)
+
+    response_json = {
+      param_name.pluralize.to_sym  => serialized,
+      list: {
+        count: metadata[:count],
+        page: metadata[:page],
+        pages: metadata[:pages]
+      }
+    }
+
+    render json: response_json, status: :ok
   end
 
   def show
@@ -130,10 +125,18 @@ class Api::ResourceController < ActionController::API
     query
   end
 
+  def authorization_valid?
+    has_policy? && @authorize
+  end
+
   def base_query
     return policy_scope(item_class) if authorization_valid?
 
     item_class.all
+  end
+
+  def bypass_authorization
+    @authorize = false
   end
 
   def load_records(item)
