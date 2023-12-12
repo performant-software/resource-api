@@ -9,14 +9,20 @@ class BaseSerializer
     @options = options
   end
 
-  def render_index(item)
-    return {} if item.nil?
+  def render_index(items)
+    return [] if items.nil?
 
-    serialized = {}
+    serialized = []
 
     # Set all of the base attributes
-    self.class.index_attributes&.map do |a|
-      extract_value serialized, item, a
+    [items].flatten.each do |item|
+      item_serialized = {}
+
+      self.class.index_attributes&.map do |a|
+        extract_value item_serialized, item, a
+      end
+
+      serialized << item_serialized
     end
 
     serialized
@@ -87,7 +93,7 @@ class BaseSerializer
         # from the index render method.
         elsif value.is_a?(Class) && (is_belongs_to?(item, key) || is_has_one?(item, key))
           related_item = item.send(key)
-          serialized[key] = value.new(current_user, options).render_index(related_item)
+          serialized[key] = value.new(current_user, options).render_index(related_item)&.first
 
         # If the value is a serializer class, grab the related item, initialize the serializer, iterate over the related
         # items and extract the value from the index render method.
@@ -95,11 +101,12 @@ class BaseSerializer
           related_items = item.send(key)
           serializer = value.new(current_user, options)
 
-          serialized[key] = []
+          serialized[key] = serializer.render_index(related_items)
 
-          related_items.each do |i|
-            serialized[key] << serializer.render_index(i)
-          end
+        # If the value is a serializer class, grab the current item and extract the value from the render_index method.
+        elsif value.is_a?(Class) && value.ancestors.include?(self.class)
+          serializer = value.new(current_user, options)
+          serialized[key] = serializer.render_index(item)
         end
       end
     end
