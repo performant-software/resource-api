@@ -104,7 +104,7 @@ class BaseSerializer
           serialized[key] = serializer.render_index(related_items)
 
         # If the value is a serializer class, grab the current item and extract the value from the render_index method.
-        elsif value.is_a?(Class) && value.ancestors.include?(self.class)
+        elsif value.is_a?(Class) && value.ancestors.include?(BaseSerializer)
           serializer = value.new(current_user, options)
           serialized[key] = serializer.render_index(item)
         end
