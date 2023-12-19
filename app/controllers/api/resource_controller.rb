@@ -23,12 +23,9 @@ class Api::ResourceController < ActionController::API
       item = prepare_item(item)
       preloads(item)
 
-      options = load_records(item)
-      serializer = serializer_class.new(current_user, options)
-
-      render json: { param_name.to_sym => serializer.render_show(item) }
+      render json: build_show_response(item), status: :ok
     else
-      render json: { errors: item.errors }, status: 400
+      render json: { errors: item.errors }, status: :bad_request
     end
   end
 
@@ -40,7 +37,7 @@ class Api::ResourceController < ActionController::API
       after_destroy
       render json: { status: :ok }
     else
-      render json: { errors: item.errors }, status: 400
+      render json: { errors: item.errors }, status: :bad_request
     end
   end
 
@@ -55,21 +52,8 @@ class Api::ResourceController < ActionController::API
     metadata = pagy_metadata(list)
 
     preloads(items)
-    options = load_records(items)
 
-    serializer = serializer_class.new(current_user, options)
-    serialized = serializer.render_index(items)
-
-    response_json = {
-      param_name.pluralize.to_sym  => serialized,
-      list: {
-        count: metadata[:count],
-        page: metadata[:page],
-        pages: metadata[:pages]
-      }
-    }
-
-    render json: response_json, status: :ok
+    render json: build_index_response(items, metadata), status: :ok
   end
 
   def show
@@ -82,10 +66,7 @@ class Api::ResourceController < ActionController::API
     item = prepare_item(item)
     preloads(item)
 
-    options = load_records(item)
-    serializer = serializer_class.new(current_user, options)
-
-    render json: { param_name.to_sym => serializer.render_show(item) }
+    render json: build_show_response(item), status: :ok
   end
 
   def update
@@ -98,12 +79,9 @@ class Api::ResourceController < ActionController::API
       item = prepare_item(item)
       preloads(item)
 
-      options = load_records(item)
-      serializer = serializer_class.new(current_user, options)
-
-      render json: { param_name.to_sym => serializer.render_show(item) }
+      render json: build_show_response(item), status: :ok
     else
-      render json: { errors: item.errors }, status: 400
+      render json: { errors: item.errors }, status: :bad_request
     end
   end
 
@@ -133,6 +111,28 @@ class Api::ResourceController < ActionController::API
     return policy_scope(item_class) if authorization_valid?
 
     item_class.all
+  end
+
+  def build_index_response(items, metadata)
+    options = load_records(items)
+    serializer = serializer_class.new(current_user, options)
+    serialized = serializer.render_index(items)
+
+    {
+      param_name.pluralize.to_sym  => serialized,
+      list: {
+        count: metadata[:count],
+        page: metadata[:page],
+        pages: metadata[:pages]
+      }
+    }
+  end
+
+  def build_show_response(item)
+    options = load_records(item)
+    serializer = serializer_class.new(current_user, options)
+
+    { param_name.to_sym => serializer.render_show(item) }
   end
 
   def bypass_authorization
