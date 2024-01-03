@@ -30,7 +30,7 @@ class Api::ResourceController < ActionController::API
   end
 
   def destroy
-    item = item_class.find(params[:id])
+    item = find_record(item_class)
     authorize item if authorization_valid?
 
     if item.destroy
@@ -60,7 +60,7 @@ class Api::ResourceController < ActionController::API
     query = base_query
     query = build_query(query)
 
-    item = query.find(params[:id])
+    item = find_record(query)
     authorize item if authorization_valid?
 
     item = prepare_item(item)
@@ -70,7 +70,7 @@ class Api::ResourceController < ActionController::API
   end
 
   def update
-    item = item_class.find(params[:id])
+    item = find_record(item_class)
     authorize item if authorization_valid?
 
     if item.update(prepare_params(item))
@@ -137,6 +137,10 @@ class Api::ResourceController < ActionController::API
 
   def bypass_authorization
     @authorize = false
+  end
+
+  def find_record(query)
+    query.find(params[:id])
   end
 
   def load_records(item)
