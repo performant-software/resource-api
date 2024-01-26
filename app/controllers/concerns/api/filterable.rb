@@ -95,7 +95,7 @@ module Api::Filterable
       when OPERATOR_EMPTY
         query.where("#{attribute} = '' OR #{attribute} IS NULL" )
       when OPERATOR_NOT_EMPTY
-        query.where("DATALENGTH#{attribute} > 0")
+        query.where("#{attribute} IS NOT NULL AND #{attribute} != ''")
       when OPERATOR_GREATER_THAN
         query.where("#{attribute} > #{value}")
       when OPERATOR_LESS_THAN
