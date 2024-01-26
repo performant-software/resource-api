@@ -93,9 +93,9 @@ module Api::Filterable
       when OPERATOR_NOT_CONTAIN
         query.where.not("#{attribute} ILIKE ?", "%#{value}%")
       when OPERATOR_EMPTY
-        query.where(attribute.blank?)
+        query.where("#{attribute} = '' OR #{attribute} IS NULL" )
       when OPERATOR_NOT_EMPTY
-        query.where.not(attribute.blank?)
+        query.where("DATALENGTH#{attribute} > 0")
       when OPERATOR_GREATER_THAN
         query.where("#{attribute} > #{value}")
       when OPERATOR_LESS_THAN
