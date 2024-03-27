@@ -18,6 +18,7 @@ module Api::Filterable
     OPERATOR_NOT_EMPTY = 'not_empty'
     OPERATOR_LESS_THAN = 'less_than'
     OPERATOR_GREATER_THAN = 'greater_than'
+    OPERATOR_WHERE_IN = 'where_in'
 
     def apply_filterable(query)
       return query unless params[:filters].present?
@@ -100,6 +101,8 @@ module Api::Filterable
         query.where("#{attribute} > #{value}")
       when OPERATOR_LESS_THAN
         query.where("#{attribute} < #{value}")
+      when OPERATOR_WHERE_IN
+        query.where("#{attribute} IN (#{value})")
       else
         query
       end
@@ -135,6 +138,8 @@ module Api::Filterable
         query.where(subquery.where("#{attribute} > ?", value).arel.exists)
       when OPERATOR_LESS_THAN
         query.where(subquery.where("#{attribute} < ?", value).arel.exists)
+      when OPERATOR_WHERE_IN
+        query.where(subquery.where("#{attribute} IN (?)", value).arel.exists)
       else
         query
       end
