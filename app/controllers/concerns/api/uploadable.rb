@@ -12,6 +12,7 @@ module Api::Uploadable
       begin
         item_class.transaction do
           items = item_class.create(upload_params)
+          errors = items.map(&:errors).delete_if(&:empty?)
         end
       rescue ActiveRecord::RecordInvalid => exception
         errors = [exception]
