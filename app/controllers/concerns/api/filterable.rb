@@ -53,12 +53,51 @@ module Api::Filterable
 
     private
 
+    def belongs_to_query(filter)
+      association_class = filter[:association_name].to_sym
+      association_column = filter[:association_column].to_sym
+
+      association = item_class.reflect_on_association(association_class)
+      related_class = association.klass
+
+      subquery = related_class.where(related_class.arel_table[:id].eq(item_class.arel_table[association_column]))
+      subquery = subquery.merge(association.scope) if association.scope.present?
+
+      subquery
+    end
+
     def filter_association(query, filter, association)
-      if item_class.reflect_on_all_associations(:belongs_to).map(&:name).include?(association) ||
-         item_class.reflect_on_all_associations(:has_one).map(&:name).include?(association)
-        filter_default(query.joins(association), filter)
-      elsif item_class.reflect_on_all_associations(:has_many).map(&:name).include?(association)
-        filter_has_many(query, filter)
+      if item_class.reflect_on_all_associations(:has_many).map(&:name).include?(association) ||
+        item_class.reflect_on_all_associations(:has_one).map(&:name).include?(association)
+        subquery = has_many_query(filter)
+      elsif item_class.reflect_on_all_associations(:belongs_to).map(&:name).include?(association)
+        subquery = belongs_to_query(filter)
+      end
+
+      return query unless subquery.present?
+
+      attribute = filter[:attribute_name]
+      value = filter[:value]
+
+      case filter[:operator]
+      when OPERATOR_EQUAL
+        query.where(subquery.where(attribute => value).arel.exists)
+      when OPERATOR_NOT_EQUAL
+        query.where.not(subquery.where(attribute => value).arel.exists)
+      when OPERATOR_CONTAIN
+        query.where(subquery.where("#{attribute} ILIKE ?", "%#{value}%").arel.exists)
+      when OPERATOR_NOT_CONTAIN
+        query.where.not(subquery.where("#{attribute} ILIKE ?", "%#{value}%").arel.exists)
+      when OPERATOR_EMPTY
+        query.where.not(subquery.arel.exists)
+      when OPERATOR_NOT_EMPTY
+        query.where(subquery.arel.exists)
+      when OPERATOR_GREATER_THAN
+        query.where(subquery.where("#{attribute} > ?", value).arel.exists)
+      when OPERATOR_LESS_THAN
+        query.where(subquery.where("#{attribute} < ?", value).arel.exists)
+      else
+        query
       end
     end
 
@@ -105,10 +144,7 @@ module Api::Filterable
       end
     end
 
-    def filter_has_many(query, filter)
-      attribute = filter[:attribute_name]
-      value = filter[:value]
-
+    def has_many_query(filter)
       association_class = filter[:association_name].to_sym
       association_column = filter[:association_column].to_sym
 
@@ -118,26 +154,7 @@ module Api::Filterable
       subquery = related_class.where(related_class.arel_table[association_column].eq(item_class.arel_table[:id]))
       subquery = subquery.merge(association.scope) if association.scope.present?
 
-      case filter[:operator]
-      when OPERATOR_EQUAL
-        query.where(subquery.where(attribute => value).arel.exists)
-      when OPERATOR_NOT_EQUAL
-        query.where.not(subquery.where(attribute => value).arel.exists)
-      when OPERATOR_CONTAIN
-        query.where(subquery.where("#{attribute} ILIKE ?", "%#{value}%").arel.exists)
-      when OPERATOR_NOT_CONTAIN
-        query.where.not(subquery.where("#{attribute} ILIKE ?", "%#{value}%").arel.exists)
-      when OPERATOR_EMPTY
-        query.where.not(subquery.arel.exists)
-      when OPERATOR_NOT_EMPTY
-        query.where(subquery.arel.exists)
-      when OPERATOR_GREATER_THAN
-        query.where(subquery.where("#{attribute} > ?", value).arel.exists)
-      when OPERATOR_LESS_THAN
-        query.where(subquery.where("#{attribute} < ?", value).arel.exists)
-      else
-        query
-      end
+      subquery
     end
   end
 
