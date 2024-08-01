@@ -74,7 +74,7 @@ module Api::Filterable
         subquery = belongs_to_query(filter)
       end
 
-      return query unless subquery.present?
+      return query if subquery.nil?
 
       attribute = filter[:attribute_name]
       value = filter[:value]
