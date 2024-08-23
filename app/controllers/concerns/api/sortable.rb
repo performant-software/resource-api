@@ -15,6 +15,9 @@ module Api::Sortable
         query = self.send(method, query)
       end
 
+      # Always order records by ID last to avoid non-deterministic ordering
+      query = query.order(:id)
+
       query
     end
 
