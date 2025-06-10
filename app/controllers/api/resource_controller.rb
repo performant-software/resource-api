@@ -15,7 +15,7 @@ class Api::ResourceController < ActionController::API
 
   def create
     item = item_class.new(prepare_params)
-    authorize item if authorization_valid?
+    authorize item, policy_class: policy_class if authorization_valid?
 
     if item.save
       after_create(item)
@@ -31,7 +31,7 @@ class Api::ResourceController < ActionController::API
 
   def destroy
     item = find_record(item_class)
-    authorize item if authorization_valid?
+    authorize item, policy_class: policy_class if authorization_valid?
 
     if item.destroy
       after_destroy
@@ -61,7 +61,7 @@ class Api::ResourceController < ActionController::API
     query = build_query(query)
 
     item = find_record(query)
-    authorize item if authorization_valid?
+    authorize item, policy_class: policy_class if authorization_valid?
 
     item = prepare_item(item)
     preloads(item)
@@ -71,7 +71,7 @@ class Api::ResourceController < ActionController::API
 
   def update
     item = find_record(item_class)
-    authorize item if authorization_valid?
+    authorize item, policy_class: policy_class if authorization_valid?
 
     if item.update(prepare_params(item))
       after_update(item)
@@ -108,9 +108,11 @@ class Api::ResourceController < ActionController::API
   end
 
   def base_query
-    return policy_scope(item_class) if authorization_valid?
-
-    item_class.all
+    if authorization_valid?
+      policy_scope item_class, policy_scope_class: policy_scope_class
+    else
+      item_class.all
+    end
   end
 
   def build_index_response(items, metadata)
@@ -215,6 +217,22 @@ class Api::ResourceController < ActionController::API
     "#{controller_name}_serializer".classify.constantize
   end
 
+  def policy_class
+    begin
+      Module.const_get("#{item_class.to_s}Policy")
+    rescue NameError
+      nil
+    end
+  end
+
+  def policy_scope_class
+    begin
+      Module.const_get("#{policy_class.to_s}::Scope")
+    rescue NameError
+      nil
+    end
+  end
+
   private
 
   def has_policy?
@@ -250,14 +268,6 @@ class Api::ResourceController < ActionController::API
     end
 
     count
-  end
-
-  def policy_class
-    begin
-      Module.const_get("#{item_class.to_s}Policy")
-    rescue NameError
-      nil
-    end
   end
 
   def unauthorized(error)
