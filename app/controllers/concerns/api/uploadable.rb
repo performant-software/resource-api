@@ -20,7 +20,7 @@ module Api::Uploadable
 
       if errors.empty?
         serializer = serializer_class.new
-        render json: { controller_name.to_sym => items.map{ |i| serializer.render_index(i) } }, status: :ok
+        render json: { controller_name.to_sym => serializer.render_index(items) }, status: :ok
       else
         render json: { errors: errors }, status: 422
       end
