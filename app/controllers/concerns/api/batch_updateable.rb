@@ -98,15 +98,21 @@ module Api::BatchUpdateable
     id_key = association.foreign_key
 
     if operator == OPERATOR_ADD
+      existing_associations = klass.where(id_key => params[:ids], association_column => params[:value])
+                                   .pluck(id_key, association_column)
+                                   .map { |id, val| "#{id}-#{val}" }
+                                   .to_set
       data = []
 
       params[:ids].each do |id|
         params[:value].each do |value|
-          data << { id_key => id, association_column => value }
+          unless existing_associations.include?("#{id}-#{value}")
+            data << { id_key => id, association_column => value }
+          end
         end
       end
 
-      error = insert_all(klass, data, [association_column, id_key])
+      error = data.any? ? insert_all(klass, data, [association_column, id_key]) : nil
     elsif operator == OPERATOR_REMOVE
       criteria = {
         id_key => params[:ids],
