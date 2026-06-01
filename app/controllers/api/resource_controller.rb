@@ -51,9 +51,15 @@ class Api::ResourceController < ActionController::API
     list, items = pagy(query, items: per_page, page: params[:page])
     metadata = pagy_metadata(list)
 
+    items = prepare_items(items)
+
     preloads(items)
 
     render json: build_index_response(items, metadata), status: :ok
+  end
+
+  def prepare_items(items)
+    items
   end
 
   def show
