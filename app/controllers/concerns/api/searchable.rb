@@ -49,22 +49,32 @@ module Api::Searchable
       # No need to apply a search if no attributes are provided
       return query if self.class.search_attributes.empty?
 
-      or_query = nil
+      # Split search into tokens on whitespace
+      tokens = params[:search].to_s.split
 
-      self.class.search_attributes.each do |attr|
-        attribute_query = resolve_search_query(attr)
+      # No need to apply a search if no tokens to search on
+      return query if tokens.empty?
 
-        if or_query.nil?
-          or_query = attribute_query
-        else
-          or_query = or_query.or(attribute_query)
-        end
+      # Resolve searchable attributes to columns
+      attributes = self.class.search_attributes.map { |attr| resolve_search_attribute(attr) }
+
+      # Build ILIKE query for each token
+      search_query = item_class.all
+
+      tokens.each do |token|
+        condition = attributes.map { |attribute| "#{attribute} ILIKE ?" }.join(' OR ')
+
+        # sanitize to escape any LIKE wildcards ("%", "_")
+        sanitized = ActiveRecord::Base.sanitize_sql_like(token)
+        values = attributes.map { "%#{sanitized}%" }
+
+        search_query = search_query.where("(#{condition})", *values)
       end
 
       if query == item_class.all
-        query.merge(or_query)
+        query.merge(search_query)
       else
-        query.or(or_query)
+        query.or(search_query)
       end
     end
   end
