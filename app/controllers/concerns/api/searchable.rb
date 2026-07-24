@@ -63,7 +63,10 @@ module Api::Searchable
 
       tokens.each do |token|
         condition = attributes.map { |attribute| "#{attribute} ILIKE ?" }.join(' OR ')
-        values = attributes.map { "%#{token}%" }
+
+        # sanitize to escape any LIKE wildcards ("%", "_")
+        sanitized = ActiveRecord::Base.sanitize_sql_like(token)
+        values = attributes.map { "%#{sanitized}%" }
 
         search_query = search_query.where("(#{condition})", *values)
       end
